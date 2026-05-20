@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>REDSEC | Offensive Security</title>
+  <meta name="description" content="REDSEC — Practical offensive security focused on pentesting, adversary simulation and defensive validation." />
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #030305;
+      --red: #d11222;
+      --white: #f5f5f6;
+      --muted: #b3b7bf;
+      --panel: rgba(8, 9, 12, 0.88);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--white);
+      font-family: Arial, Helvetica, sans-serif;
+      overflow-x: hidden;
+      line-height: 1.6;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(circle at 80% 18%, rgba(209,18,34,0.20), transparent 28%),
+        radial-gradient(circle at 12% 86%, rgba(209,18,34,0.13), transparent 32%),
+        linear-gradient(180deg, #08080b 0%, #030305 100%);
+      z-index: -6;
+    }
+
+    .grid {
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+      background-size: 54px 54px;
+      mask-image: radial-gradient(circle at center, black 0%, black 42%, transparent 82%);
+      z-index: -5;
+      animation: gridMove 18s linear infinite;
+      pointer-events: none;
+    }
+
+    .red-grid {
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(209,18,34,0.07) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(209,18,34,0.07) 1px, transparent 1px);
+      background-size: 216px 216px;
+      z-index: -4;
+      animation: redGridMove 28s linear infinite;
+      pointer-events: none;
+    }
+
+    .scan {
+      position: fixed;
+      left: 0;
+      right: 0;
+      top: -20%;
+      height: 160px;
+      background: linear-gradient(180deg, transparent, rgba(209,18,34,0.13), transparent);
+      z-index: -3;
+      animation: scanMove 7s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    .noise {
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(0deg, rgba(255,255,255,0.018) 0 1px, transparent 1px 4px);
+      opacity: 0.35;
+      z-index: -2;
+      pointer-events: none;
+    }
+
+    .orb {
+      position: fixed;
+      width: 440px;
+      height: 440px;
+      border-radius: 999px;
+      background: radial-gradient(circle, rgba(209,18,34,0.18), transparent 62%);
+      filter: blur(6px);
+      right: -120px;
+      top: 120px;
+      animation: orbPulse 5s ease-in-out infinite alternate;
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    .container {
+      width: min(1120px, calc(100% - 40px));
+      margin: 0 auto;
+    }
+
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      padding: 38px 0;
+    }
+
+    .hero-card {
+      width: 100%;
+      min-height: 680px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      position: relative;
+      padding: 72px 44px;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,0.045), transparent 28%),
+        var(--panel);
+      border: 1px solid rgba(255,255,255,0.11);
+      box-shadow:
+        0 44px 120px rgba(0,0,0,0.75),
+        inset 0 0 0 1px rgba(255,255,255,0.025);
+      overflow: hidden;
+    }
+
+    .hero-card::before {
+      content: "";
+      position: absolute;
+      inset: -1px;
+      background:
+        linear-gradient(90deg, transparent, var(--red), transparent) top / 100% 2px no-repeat,
+        linear-gradient(90deg, transparent, rgba(255,255,255,0.45), transparent) bottom / 100% 1px no-repeat;
+      pointer-events: none;
+      animation: borderPulse 3.2s ease-in-out infinite alternate;
+    }
+
+    .hero-card::after {
+      content: "";
+      position: absolute;
+      width: 520px;
+      height: 520px;
+      border-radius: 999px;
+      border: 1px solid rgba(209,18,34,0.22);
+      box-shadow:
+        0 0 80px rgba(209,18,34,0.10),
+        inset 0 0 80px rgba(209,18,34,0.04);
+      animation: ringPulse 5s ease-in-out infinite alternate;
+      pointer-events: none;
+    }
+
+    .corner {
+      position: absolute;
+      width: 52px;
+      height: 52px;
+      border-color: var(--white);
+      opacity: 0.82;
+      z-index: 4;
+    }
+
+    .tl { top: 24px; left: 24px; border-top: 2px solid; border-left: 2px solid; }
+    .tr { top: 24px; right: 24px; border-top: 2px solid; border-right: 2px solid; }
+    .bl { bottom: 24px; left: 24px; border-bottom: 2px solid; border-left: 2px solid; }
+    .br { bottom: 24px; right: 24px; border-bottom: 2px solid; border-right: 2px solid; }
+
+    .micro {
+      position: absolute;
+      top: 34px;
+      left: 34px;
+      right: 34px;
+      display: flex;
+      justify-content: space-between;
+      color: rgba(255,255,255,0.28);
+      font-family: monospace;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 5;
+      width: 100%;
+    }
+
+    .eyebrow {
+      color: var(--red);
+      text-transform: uppercase;
+      letter-spacing: 0.34em;
+      font-size: 12px;
+      font-weight: 900;
+      margin-bottom: 26px;
+    }
+
+    h1 {
+      font-size: clamp(74px, 15vw, 176px);
+      line-height: 0.86;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 900;
+      color: var(--white);
+      text-shadow: 0 24px 55px rgba(0,0,0,0.75);
+    }
+
+    h1 .red {
+      color: var(--red);
+      text-shadow:
+        0 0 20px rgba(209,18,34,0.30),
+        0 24px 55px rgba(0,0,0,0.75);
+    }
+
+    .divider {
+      width: min(590px, 88%);
+      height: 1px;
+      margin: 32px auto 26px;
+      background: linear-gradient(90deg, transparent, var(--red), var(--white), var(--red), transparent);
+      position: relative;
+    }
+
+    .divider::after {
+      content: "";
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      left: 50%;
+      top: 50%;
+      background: var(--red);
+      transform: translate(-50%, -50%) rotate(45deg);
+      box-shadow: 0 0 25px rgba(209,18,34,0.95);
+    }
+
+    .hero-text {
+      max-width: 800px;
+      margin: 0 auto;
+      color: #d2d4da;
+      font-size: clamp(17px, 2vw, 21px);
+      line-height: 1.8;
+      text-shadow: 0 2px 18px rgba(0,0,0,0.85);
+    }
+
+    .tags {
+      margin-top: 36px;
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+
+    .tag {
+      padding: 11px 15px;
+      border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.045);
+      color: #f1f1f3;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      box-shadow: inset 0 0 20px rgba(209,18,34,0.035);
+    }
+
+    .scroll {
+      margin-top: 42px;
+      color: rgba(255,255,255,0.48);
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    section {
+      padding: 90px 0;
+    }
+
+    .section-title small {
+      color: var(--red);
+      text-transform: uppercase;
+      letter-spacing: 0.26em;
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .section-title h2 {
+      margin-top: 12px;
+      max-width: 900px;
+      font-size: clamp(34px, 5vw, 62px);
+      line-height: 1;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .section-title p {
+      max-width: 860px;
+      margin-top: 20px;
+      color: var(--muted);
+      font-size: 17px;
+      line-height: 1.85;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 22px;
+      margin-top: 42px;
+    }
+
+    .card {
+      min-height: 340px;
+      padding: 32px;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.11);
+      background:
+        linear-gradient(145deg, rgba(209,18,34,0.10), transparent 42%),
+        rgba(10,10,14,0.82);
+      box-shadow: 0 28px 90px rgba(0,0,0,0.34);
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 2px;
+      width: 100%;
+      background: linear-gradient(90deg, var(--red), transparent);
+    }
+
+    .card::after {
+      content: "";
+      position: absolute;
+      width: 160px;
+      height: 160px;
+      border-radius: 999px;
+      border: 1px solid rgba(209,18,34,0.18);
+      right: -64px;
+      bottom: -64px;
+    }
+
+    .index {
+      color: var(--red);
+      font-size: 12px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      font-weight: 900;
+      margin-bottom: 24px;
+    }
+
+    .card h3 {
+      color: var(--white);
+      font-size: 24px;
+      line-height: 1.2;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 16px;
+    }
+
+    .card p {
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.8;
+    }
+
+    .wide {
+      margin-top: 24px;
+      padding: 38px;
+      display: grid;
+      grid-template-columns: 0.9fr 1.1fr;
+      gap: 34px;
+      border: 1px solid rgba(255,255,255,0.11);
+      border-left: 2px solid var(--red);
+      background:
+        linear-gradient(90deg, rgba(209,18,34,0.10), transparent 46%),
+        rgba(17,17,22,0.76);
+    }
+
+    .wide h3 {
+      font-size: clamp(28px, 4vw, 46px);
+      line-height: 1;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .wide p {
+      color: var(--muted);
+      line-height: 1.9;
+      font-size: 16px;
+    }
+
+    .attack-visual {
+      margin-top: 44px;
+      position: relative;
+      min-height: 420px;
+      border: 1px solid rgba(255,255,255,0.10);
+      background:
+        radial-gradient(circle at 50% 48%, rgba(209,18,34,0.20), transparent 22%),
+        linear-gradient(135deg, rgba(255,255,255,0.04), transparent 30%),
+        rgba(8,9,12,0.84);
+      overflow: hidden;
+      box-shadow: 0 30px 100px rgba(0,0,0,0.42);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .attack-visual::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(209,18,34,0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(209,18,34,0.08) 1px, transparent 1px);
+      background-size: 36px 36px;
+      transform: perspective(650px) rotateX(58deg) translateY(104px) scale(1.7);
+      transform-origin: center bottom;
+      opacity: 0.72;
+    }
+
+    .attack-visual::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at center, rgba(209,18,34,0.10), transparent 42%);
+      pointer-events: none;
+    }
+
+    .radar {
+      position: relative;
+      width: 330px;
+      height: 330px;
+      border-radius: 999px;
+      z-index: 4;
+    }
+
+    .radar-ring {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      border-radius: 999px;
+      border: 1px solid rgba(209,18,34,0.35);
+      box-shadow: 0 0 25px rgba(209,18,34,0.10);
+      transform: translate(-50%, -50%);
+    }
+
+    .radar-ring-1 { width: 120px; height: 120px; }
+    .radar-ring-2 { width: 220px; height: 220px; }
+    .radar-ring-3 { width: 330px; height: 330px; }
+
+    .radar-center {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 14px;
+      height: 14px;
+      border-radius: 999px;
+      background: var(--red);
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 30px rgba(209,18,34,1), 0 0 80px rgba(209,18,34,0.55);
+      z-index: 8;
+    }
+
+    .radar-sweep {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 165px;
+      height: 2px;
+      background: linear-gradient(90deg, var(--red), rgba(209,18,34,0));
+      transform-origin: left center;
+      animation: sweep 4s linear infinite;
+      z-index: 7;
+      box-shadow: 0 0 18px rgba(209,18,34,0.95);
+    }
+
+    .radar-sweep::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: -55px;
+      width: 165px;
+      height: 110px;
+      background: conic-gradient(from -25deg at left center, rgba(209,18,34,0.22), transparent 55deg);
+      opacity: 0.7;
+    }
+
+    .radar-node {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: var(--red);
+      box-shadow: 0 0 24px rgba(209,18,34,1);
+      z-index: 9;
+      animation: nodePulse 2s ease-in-out infinite alternate;
+    }
+
+    .node-1 { transform: translate(-125px,-70px); }
+    .node-2 { transform: translate(112px,-44px); animation-delay: .5s; }
+    .node-3 { transform: translate(82px,118px); animation-delay: 1s; }
+    .node-4 { transform: translate(-98px,96px); animation-delay: 1.5s; }
+
+    .floating-label {
+      position: absolute;
+      border: 1px solid rgba(209,18,34,0.55);
+      color: var(--red);
+      background: rgba(10,0,2,0.42);
+      padding: 8px 11px;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+      z-index: 10;
+      animation: float 3s ease-in-out infinite alternate;
+    }
+
+    .label-1 { left: 18%; top: 18%; }
+    .label-2 { right: 18%; top: 20%; animation-delay: .7s; }
+    .label-3 { right: 16%; bottom: 18%; animation-delay: 1.2s; }
+    .label-4 { left: 16%; bottom: 148px; animation-delay: 1.6s; }
+
+    .attack-terminal {
+      position: absolute;
+      left: 36px;
+      bottom: 34px;
+      width: min(360px, calc(100% - 72px));
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(0,0,0,0.43);
+      padding: 18px;
+      font-family: monospace;
+      font-size: 12px;
+      color: rgba(255,255,255,0.74);
+      z-index: 10;
+    }
+
+    .bar {
+      height: 6px;
+      margin-top: 12px;
+      background: rgba(255,255,255,0.10);
+      overflow: hidden;
+    }
+
+    .bar span {
+      display: block;
+      height: 100%;
+      width: 70%;
+      background: linear-gradient(90deg, var(--red), #ff6b74);
+      animation: load 3s ease-in-out infinite alternate;
+    }
+
+    .methodology {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      gap: 0 24px;
+      margin-top: 54px;
+      position: relative;
+    }
+
+    .methodology::before {
+      content: "";
+      position: absolute;
+      left: 59px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: linear-gradient(180deg, transparent, var(--red), var(--red), transparent);
+      box-shadow: 0 0 24px rgba(209,18,34,0.65);
+    }
+
+    .step-icon {
+      width: 74px;
+      height: 74px;
+      margin: 0 auto;
+      border: 1px solid rgba(209,18,34,0.55);
+      background: rgba(10,10,14,0.88);
+      display: grid;
+      place-items: center;
+      position: relative;
+      z-index: 2;
+      box-shadow: 0 0 35px rgba(209,18,34,0.16);
+    }
+
+    .step-icon svg {
+      width: 32px;
+      height: 32px;
+      stroke: var(--red);
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      filter: drop-shadow(0 0 8px rgba(209,18,34,.7));
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      grid-column: 1 / -1;
+      gap: 24px;
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    .step-card {
+      border: 1px solid rgba(255,255,255,0.11);
+      background:
+        linear-gradient(90deg, rgba(209,18,34,0.10), transparent 38%),
+        rgba(10,10,14,0.84);
+      padding: 28px;
+      display: grid;
+      grid-template-columns: 0.7fr 1.2fr;
+      gap: 28px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .step-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-left: 2px solid var(--red);
+      pointer-events: none;
+    }
+
+    .step-number {
+      color: var(--red);
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .step-card h3 {
+      font-size: 24px;
+      line-height: 1.15;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .step-card p {
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.8;
+    }
+
+    .step-card ul {
+      margin-top: 12px;
+      padding-left: 18px;
+      color: #d1d3d9;
+      font-size: 14px;
+      line-height: 1.8;
+    }
+
+    footer {
+      padding: 60px 0 34px;
+    }
+
+    .footer-inner {
+      border-top: 1px solid rgba(255,255,255,0.11);
+      padding-top: 24px;
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      color: rgba(255,255,255,0.42);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+    }
+
+    @keyframes gridMove { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(54px, 54px, 0); } }
+    @keyframes redGridMove { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-216px, 108px, 0); } }
+    @keyframes scanMove { 0% { transform: translateY(-20vh); opacity: 0; } 20% { opacity: 1; } 55% { opacity: 0.7; } 100% { transform: translateY(125vh); opacity: 0; } }
+    @keyframes borderPulse { from { opacity: 0.55; } to { opacity: 1; } }
+    @keyframes ringPulse { from { transform: scale(0.96); opacity: 0.55; } to { transform: scale(1.05); opacity: 1; } }
+    @keyframes orbPulse { from { opacity: .65; transform: scale(1); } to { opacity: 1; transform: scale(1.08); } }
+    @keyframes nodePulse { from { opacity: 0.55; } to { opacity: 1; } }
+    @keyframes sweep { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    @keyframes float { from { transform: translateY(0); } to { transform: translateY(-10px); } }
+    @keyframes load { from { width: 18%; } to { width: 94%; } }
+
+    @media (max-width: 980px) {
+      .cards { grid-template-columns: 1fr; }
+      .wide { grid-template-columns: 1fr; }
+      .methodology, .step { grid-template-columns: 82px 1fr; }
+      .methodology::before { left: 40px; }
+      .step-icon { width: 58px; height: 58px; }
+      .step-icon svg { width: 26px; height: 26px; }
+      .step-card { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 640px) {
+      .container { width: min(100% - 24px, 1120px); }
+      .hero-card { min-height: 590px; padding: 54px 22px; }
+      .micro { display: none; }
+      h1 { letter-spacing: 0.04em; }
+      .eyebrow { letter-spacing: 0.22em; }
+      .cards { grid-template-columns: 1fr; }
+      .card, .wide, .step-card { padding: 24px; }
+      .methodology, .step { grid-template-columns: 1fr; }
+      .methodology::before { display: none; }
+      .step-icon { margin: 0 0 12px; }
+      .attack-visual { min-height: 470px; }
+      .floating-label { display: none; }
+      .attack-terminal { left: 20px; right: 20px; width: auto; }
+      .footer-inner { flex-direction: column; text-align: center; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="grid"></div>
+  <div class="red-grid"></div>
+  <div class="scan"></div>
+  <div class="noise"></div>
+  <div class="orb"></div>
+
+  <main>
+    <section class="hero">
+      <div class="container">
+        <div class="hero-card">
+          <div class="corner tl"></div>
+          <div class="corner tr"></div>
+          <div class="corner bl"></div>
+          <div class="corner br"></div>
+
+          <div class="micro">
+            <span>ATT&CK / TTP VALIDATION</span>
+            <span>CONTROLLED SCOPE</span>
+          </div>
+
+          <div class="hero-content">
+            <div class="eyebrow">Offensive Security</div>
+
+            <h1><span class="red">RED</span>SEC</h1>
+
+            <div class="divider"></div>
+
+            <p class="hero-text">
+              Practical offensive security focused on realistic attack paths,
+              adversary simulation and defensive validation.
+            </p>
+
+            <div class="tags">
+              <span class="tag">Pentesting</span>
+              <span class="tag">Adversary Simulation</span>
+              <span class="tag">Purple Teaming</span>
+            </div>
+
+            <div class="scroll">Scroll for more</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <div class="section-title">
+          <small>Approach</small>
+          <h2>Security tested like an attacker would.</h2>
+          <p>
+            REDSEC is being built around practical offensive security. The focus is not only on identifying vulnerabilities,
+            but on validating how well defensive systems, monitoring pipelines and operational processes perform against realistic attacker behavior.
+          </p>
+        </div>
+
+        <div class="cards">
+          <article class="card">
+            <div class="index">01 / Pentesting</div>
+            <h3>Controlled offensive assessments</h3>
+            <p>
+              Pentesting focuses on identifying exploitable weaknesses in applications, infrastructure and internal environments.
+              The goal is to provide clear, actionable findings that help prioritize real risk instead of generic noise.
+            </p>
+          </article>
+
+          <article class="card">
+            <div class="index">02 / Adversary Simulation</div>
+            <h3>Validation through attacker behavior</h3>
+            <p>
+              Adversary simulation emulates realistic attacker TTPs based on frameworks such as MITRE ATT&CK.
+              The objective is to validate whether security controls, SIEM pipelines, EDR platforms and operational monitoring can properly detect malicious behavior.
+            </p>
+          </article>
+
+          <article class="card">
+            <div class="index">03 / Purple Teaming</div>
+            <h3>Collaborative defensive improvement</h3>
+            <p>
+              Purple teaming combines offensive testing with defensive collaboration. Instead of operating entirely in stealth,
+              findings are reviewed together with defenders to improve alerting, visibility and incident response readiness.
+            </p>
+          </article>
+        </div>
+
+        <div class="wide">
+          <h3>Focused on realistic security validation.</h3>
+          <p>
+            Rather than relying on exaggerated marketing or unrealistic “elite hacker” positioning, REDSEC focuses on technically grounded offensive security.
+            The objective is to emulate realistic attacker behavior in a controlled way, helping organizations better understand exposure,
+            improve detection quality and strengthen defensive maturity.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <div class="section-title">
+          <small>Methodology</small>
+          <h2>A structured offensive approach.</h2>
+          <p>
+            REDSEC follows a realistic offensive security methodology inspired by practical pentesting workflows,
+            adversary emulation and controlled validation exercises.
+          </p>
+        </div>
+
+        <div class="attack-visual" aria-label="Animated attack vector radar visualization">
+          <div class="radar">
+            <div class="radar-ring radar-ring-1"></div>
+            <div class="radar-ring radar-ring-2"></div>
+            <div class="radar-ring radar-ring-3"></div>
+
+            <div class="radar-center"></div>
+            <div class="radar-sweep"></div>
+
+            <div class="radar-node node-1"></div>
+            <div class="radar-node node-2"></div>
+            <div class="radar-node node-3"></div>
+            <div class="radar-node node-4"></div>
+          </div>
+
+          <div class="floating-label label-1">Recon</div>
+          <div class="floating-label label-2">Discovery</div>
+          <div class="floating-label label-3">Exploit</div>
+          <div class="floating-label label-4">Post-Exploit</div>
+
+          <div class="attack-terminal">
+            <div>&gt;&gt; initializing methodology...</div>
+            <div>&gt;&gt; establishing attack vector</div>
+            <div>&gt;&gt; validating impact</div>
+            <div class="bar"><span></span></div>
+          </div>
+        </div>
+
+        <div class="methodology">
+          <div class="step">
+            <div class="step-icon">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="1.5"/></svg>
+            </div>
+            <article class="step-card">
+              <div>
+                <div class="step-number">01 / Planning & Recon</div>
+                <h3>Planning and reconnaissance</h3>
+              </div>
+              <div>
+                <p>Defining scope, identifying objectives and gathering intelligence about the target environment before testing begins.</p>
+                <ul>
+                  <li>Scope definition</li>
+                  <li>OSINT & exposure review</li>
+                  <li>Target profiling</li>
+                </ul>
+              </div>
+            </article>
+          </div>
+
+          <div class="step">
+            <div class="step-icon">
+              <svg viewBox="0 0 24 24"><circle cx="10" cy="10" r="6"/><path d="M15 15l6 6"/><path d="M10 7v6M7 10h6"/></svg>
+            </div>
+            <article class="step-card">
+              <div>
+                <div class="step-number">02 / Scanning & Discovery</div>
+                <h3>Mapping the attack surface</h3>
+              </div>
+              <div>
+                <p>Enumerating systems, applications and services to identify live hosts, exposed functionality and potential entry points.</p>
+                <ul>
+                  <li>Port and service enumeration</li>
+                  <li>Web & API discovery</li>
+                  <li>Technology fingerprinting</li>
+                </ul>
+              </div>
+            </article>
+          </div>
+
+          <div class="step">
+            <div class="step-icon">
+              <svg viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 10-13h-7l0-7z"/></svg>
+            </div>
+            <article class="step-card">
+              <div>
+                <div class="step-number">03 / Exploitation</div>
+                <h3>Controlled exploitation</h3>
+              </div>
+              <div>
+                <p>Safely exploiting identified weaknesses to validate impact, access potential and realistic attacker pathways.</p>
+                <ul>
+                  <li>Initial access validation</li>
+                  <li>Exploit verification</li>
+                  <li>Impact demonstration</li>
+                </ul>
+              </div>
+            </article>
+          </div>
+
+          <div class="step">
+            <div class="step-icon">
+              <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+            </div>
+            <article class="step-card">
+              <div>
+                <div class="step-number">04 / Post-Exploitation</div>
+                <h3>Post-exploitation & validation</h3>
+              </div>
+              <div>
+                <p>Assessing privilege boundaries, lateral movement possibilities and defensive visibility after successful exploitation.</p>
+                <ul>
+                  <li>Privilege escalation analysis</li>
+                  <li>Internal pivot validation</li>
+                  <li>Defensive visibility checks</li>
+                </ul>
+              </div>
+            </article>
+          </div>
+
+          <div class="step">
+            <div class="step-icon">
+              <svg viewBox="0 0 24 24"><path d="M4 17l7-7 3 3-7 7H4v-3z"/><path d="M13 11l4-4"/><path d="M16 4l4 4"/><path d="M3 21h18"/></svg>
+            </div>
+            <article class="step-card">
+              <div>
+                <div class="step-number">05 / Cleanup</div>
+                <h3>Cleanup & operational safety</h3>
+              </div>
+              <div>
+                <p>Removing artifacts, closing sessions and ensuring the environment is returned to its original operational state.</p>
+                <ul>
+                  <li>Artifact cleanup</li>
+                  <li>Session termination</li>
+                  <li>Environment restoration</li>
+                </ul>
+              </div>
+            </article>
+          </div>
+
+          <div class="step">
+            <div class="step-icon">
+              <svg viewBox="0 0 24 24"><path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6"/><path d="M9 13h7M9 17h7"/></svg>
+            </div>
+            <article class="step-card">
+              <div>
+                <div class="step-number">06 / Reporting</div>
+                <h3>Reporting & remediation</h3>
+              </div>
+              <div>
+                <p>Delivering clear technical findings, realistic risk analysis and actionable remediation guidance.</p>
+                <ul>
+                  <li>Technical reporting</li>
+                  <li>Risk prioritization</li>
+                  <li>Remediation recommendations</li>
+                </ul>
+              </div>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container footer-inner">
+      <span>REDSEC / Belgium</span>
+      <span>Currently Building</span>
+    </div>
+  </footer>
+</body>
+</html>
