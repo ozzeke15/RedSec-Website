@@ -1,0 +1,10 @@
+# Preserve branch-based GitHub Pages publishing, including RFC 9116's dot directory.
+include:
+  - .well-known
+exclude:
+  - docs
+  - tests
+  - SECURITY.md
+  - README.md
+  - Gemfile
+  - Gemfile.lock
