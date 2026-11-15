@@ -45,5 +45,5 @@ body{overflow-x:clip}
 .engine-capabilities p{font-size:14px;line-height:1.7;color:var(--muted);margin:0}
 @media(max-width:720px){.section-head>.label,.about>.label,.closing .label{font-size:16px}.direction-row .number{font-size:18px}.hero-band strong{font-size:11px}.engine-capabilities{grid-template-columns:1fr;gap:24px;margin-top:34px}}
 /* Previously inline declaration equivalents; no visual change. */
-.recommendation-label-spacing{margin-top:22px}
+.finding .recommendation-label-spacing{margin-top:22px}
 .contact-label-spacing{margin-bottom:20px}

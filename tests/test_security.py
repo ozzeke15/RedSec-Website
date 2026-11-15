@@ -51,6 +51,12 @@ class SecurityTests(unittest.TestCase):
             if 'aria-controls' in attrs:
                 self.assertIn(attrs['aria-controls'], ids)
 
+    def test_spacing_override_specificity(self):
+        # Must outrank `.finding p { margin: 8px 0 }` after removing inline style.
+        css = (ROOT / 'assets/site.css').read_text()
+        self.assertIn('.finding .recommendation-label-spacing{margin-top:22px}', css)
+        self.assertIn('.contact-label-spacing{margin-bottom:20px}', css)
+
     def test_security_contact(self):
         fields = dict(line.split(': ', 1) for line in
                       (ROOT / '.well-known/security.txt').read_text().splitlines())

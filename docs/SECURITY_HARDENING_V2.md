@@ -217,10 +217,11 @@ References: [Free custom rules](https://developers.cloudflare.com/waf/custom-rul
 
 Completed locally:
 
-- `python3 -m unittest discover -s tests -v`: four tests pass (strict policy,
+- `python3 -m unittest discover -s tests -v`: five tests pass (strict policy,
   local resources/anchor/control IDs, disclosure expiry/contact, sensitive file
   names and Jekyll exclusions). These are regression checks, not a general
   vulnerability scanner or proof of absence of secrets.
+- GitHub Actions run [43772261259](https://github.com/ozzeke15/RedSec-Website/actions/runs/43772261259): Python checks and `node --check assets/site.js` passed on implementation commit `d5095be`.
 - `git diff --check`: passes. Current and reachable historical files reviewed;
   targeted credential-pattern scan found zero matches.
 - Chrome loopback preview: homepage renders, both logo images decode, stylesheet
@@ -234,7 +235,7 @@ Completed locally:
   redirect following. No live scan evidence is committed.
 
 Outstanding: local Node syntax CLI (Node not installed), Jekyll artifact build
-(Jekyll toolchain not installed), CI execution, post-merge HTTPS disclosure and
+(Jekyll toolchain not installed), post-merge HTTPS disclosure and
 asset delivery, final deployed CSP/console behavior, edge-header enforcement,
 Cloudflare rule tester, Pages DNS-check completion, domain verification and
 SponsorTracker compatibility. Offline tests do not assert these passed.
